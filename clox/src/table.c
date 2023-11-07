@@ -100,6 +100,8 @@ bool tableGet(Table* table, ObjString* key, Value* value) {
     return true;
 }
 
+/// Sets the matching `key` to the `value` passed in. Returns true when a new
+/// key is created. Returns false if the key already existed.
 bool tableSet(Table* table, ObjString* key, Value value) {
     if (table->count >= table->capacity * TABLE_MAX_LOAD) {
         int capacity = GROW_CAPACITY(table->capacity);

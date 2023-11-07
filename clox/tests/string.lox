@@ -1,0 +1,2 @@
+var string = "st" + "ri" + "ng";
+print string;

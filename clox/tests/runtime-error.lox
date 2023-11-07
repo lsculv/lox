@@ -1,0 +1,3 @@
+var a = 12;
+var b = a + 4;
+printf b // missing ';'
