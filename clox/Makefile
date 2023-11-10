@@ -1,30 +1,52 @@
-BUILDDIR=build
-TARGETS=$(BUILDDIR)/chunk.o $(BUILDDIR)/compiler.o $(BUILDDIR)/debug.o $(BUILDDIR)/main.o $(BUILDDIR)/memory.o $(BUILDDIR)/object.o $(BUILDDIR)/scanner.o $(BUILDDIR)/table.o $(BUILDDIR)/value.o $(BUILDDIR)/vm.o 
-SOURCEDIR=src
-CFLAGS=-Wall -Wextra -lm
+SOURCE_DIR=src
+BUILD_DIR=target
+TEST_DIR=tests
+
+RELEASE_DIR=$(BUILD_DIR)/release
+DEBUG_DIR=$(BUILD_DIR)/debug
+
+OBJECTS=chunk.o compiler.o debug.o main.o memory.o object.o scanner.o table.o value.o vm.o 
+
+RELEASE_TARGETS=$(addprefix $(RELEASE_DIR)/, $(OBJECTS))
+DEBUG_TARGETS=$(addprefix $(DEBUG_DIR)/, $(OBJECTS))
+
+CFLAGS=-Wall -Wextra -Werror -lm
 RELEASE_FLAGS=-O3
 DEBUG_FLAGS=-g -DDEBUG_PRINT_CODE -DDEBUG_TRACE_EXECUTION
 
 .PHONY: all
-all: clox
+all: release 
 
-clox: $(TARGETS)
-	cc $(CFLAGS) $(RELEASE_FLAGS) -o $(BUILDDIR)/$@ $^
+release: $(RELEASE_TARGETS)
+	cc $(CFLAGS) $(RELEASE_FLAGS) -o $(RELEASE_DIR)/clox $^
 
-debug: $(TARGETS)
-	cc $(CFLAGS) $(DEBUG_FLAGS) -o $(BUILDDIR)/clox $^
+debug: $(DEBUG_TARGETS)
+	cc $(CFLAGS) $(DEBUG_FLAGS) -o $(DEBUG_DIR)/clox $^
 
-$(BUILDDIR)/%.o: $(SOURCEDIR)/%.c | $(BUILDDIR)
-	cc $(CFLAGS) -c $< -o $@
+$(RELEASE_DIR)/%.o: $(SOURCE_DIR)/%.c | $(RELEASE_DIR)
+	cc $(CFLAGS) $(RELEASE_FLAGS) -c $< -o $@
 
-$(BUILDDIR):
-	mkdir $(BUILDDIR)
+$(DEBUG_DIR)/%.o: $(SOURCE_DIR)/%.c | $(DEBUG_DIR)
+	cc $(CFLAGS) $(DEBUG_FLAGS) -c $< -o $@
+
+$(RELEASE_DIR):
+	mkdir -p $@
+
+$(DEBUG_DIR):
+	mkdir -p $@
 
 .PHONY: fmt
 fmt:
-	fd '.*\.(c|h)' | xargs clang-format --verbose -i 
+	fd -e 'c' -e 'h' | xargs clang-format --verbose -i 
 
 .PHONY: clean
 clean: 
-	rm -rf $(BUILDDIR)
+	rm -rf $(BUILD_DIR)
 
+.PHONY: run
+run: release 
+	./$(RELEASE_DIR)/clox
+
+.PHONY: rund
+rund: debug 
+	./$(DEBUG_DIR)/clox
