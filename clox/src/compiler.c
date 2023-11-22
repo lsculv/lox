@@ -5,6 +5,7 @@
 #include "chunk.h"
 #include "common.h"
 #include "compiler.h"
+#include "memory.h"
 #include "object.h"
 #include "scanner.h"
 #include "value.h"
@@ -28,7 +29,7 @@ typedef enum {
     PREC_EQUALITY,   // == !=
     PREC_COMPARISON, // < > <= >=
     PREC_TERM,       // + -
-    PREC_FACTOR,     // * /
+    PREC_FACTOR,     // * / %
     PREC_UNARY,      // ! -
     PREC_CALL,       // . ()
     PREC_PRIMARY
@@ -45,7 +46,13 @@ typedef struct {
 typedef struct {
     Token name;
     int depth;
+    bool is_captured;
 } Local;
+
+typedef struct {
+    uint8_t index;
+    bool is_local;
+} Upvalue;
 
 typedef enum {
     TYPE_FUNCTION,
@@ -58,6 +65,7 @@ typedef struct Compiler {
     FunctionType type;
     Local locals[UINT8_COUNT];
     int local_count;
+    Upvalue upvalues[UINT8_COUNT];
     int scope_depth;
 } Compiler;
 
@@ -208,6 +216,7 @@ static void initCompiler(Compiler* compiler, FunctionType type) {
 
     Local* local = &current->locals[current->local_count++];
     local->depth = 0;
+    local->is_captured = false;
     local->name.start = "";
     local->name.length = 0;
 }
@@ -236,9 +245,13 @@ static void endScope() {
 
     while (current->local_count > 0 &&
            current->locals[current->local_count - 1].depth > current->scope_depth) {
-        // Instead of popping the locals individually, we could use a new `OP_POPN`
-        // instruction that can pop multiple values off the stack at once.
-        emitByte(OP_POP);
+        if (current->locals[current->local_count - 1].is_captured) {
+            emitByte(OP_CLOSE_UPVALUE);
+        } else {
+            // Instead of popping the locals individually, we could use a new `OP_POPN`
+            // instruction that can pop multiple values off the stack at once.
+            emitByte(OP_POP);
+        }
         current->local_count--;
     }
 }
@@ -277,6 +290,46 @@ static int resolveLocal(Compiler* compiler, Token* name) {
     return -1;
 }
 
+static int addUpvalue(Compiler* compiler, uint8_t index, bool is_local) {
+    int upvalue_count = compiler->function->upvalue_count;
+
+    // Check if the upvalue already exists.
+    for (int i = 0; i < upvalue_count; i++) {
+        Upvalue* upvalue = &compiler->upvalues[i];
+        if (upvalue->index == index && upvalue->is_local == is_local) {
+            return i;
+        }
+    }
+
+    if (upvalue_count == UINT8_COUNT) {
+        error("Too many closure variables in function.");
+        return 0;
+    }
+
+    compiler->upvalues[upvalue_count].is_local = is_local;
+    compiler->upvalues[upvalue_count].index = index;
+    return compiler->function->upvalue_count++;
+}
+
+static int resolveUpvalue(Compiler* compiler, Token* name) {
+    if (compiler->enclosing == NULL) {
+        return -1;
+    }
+
+    int local = resolveLocal(compiler->enclosing, name);
+    if (local != -1) {
+        compiler->enclosing->locals[local].is_captured = true;
+        return addUpvalue(compiler, (uint8_t)local, true);
+    }
+
+    int upvalue = resolveUpvalue(compiler->enclosing, name);
+    if (upvalue != -1) {
+        return addUpvalue(compiler, (uint8_t)upvalue, false);
+    }
+
+    return -1;
+}
+
 static void addLocal(Token name) {
     if (current->local_count == UINT8_COUNT) {
         error("Too many local variables in function.");
@@ -287,6 +340,7 @@ static void addLocal(Token name) {
     Local* local = &current->locals[current->local_count++];
     local->name = name;
     local->depth = -1;
+    local->is_captured = false;
 }
 
 static void declareVariable() {
@@ -378,6 +432,7 @@ static void binary(bool can_assign) {
     case TOKEN_MINUS: emitByte(OP_SUBTRACT); break;
     case TOKEN_STAR: emitByte(OP_MULTIPLY); break;
     case TOKEN_SLASH: emitByte(OP_DIVIDE); break;
+    case TOKEN_PERCENT: emitByte(OP_MOD); break;
     default: return; //__builtin_unreachable();
     }
 }
@@ -386,6 +441,18 @@ static void call(bool can_assign) {
     UNUSED(can_assign);
     uint8_t argCount = argumentList();
     emitBytes(OP_CALL, argCount);
+}
+
+static void dot(bool can_assign) {
+    consume(TOKEN_IDENTIFIER, "Expect property name after '.'.");
+    uint8_t name = identifierConstant(&parser.previous);
+
+    if (can_assign && match(TOKEN_EQUAL)) {
+        expression();
+        emitBytes(OP_SET_PROPERTY, name);
+    } else {
+        emitBytes(OP_GET_PROPERTY, name);
+    }
 }
 
 static void literal(bool can_assign) {
@@ -431,7 +498,24 @@ static void function(FunctionType type) {
     block();
 
     ObjFunction* function = endCompiler();
-    emitBytes(OP_CONSTANT, makeConstant(OBJ_VAL(function)));
+    emitBytes(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
+
+    for (int i = 0; i < function->upvalue_count; i++) {
+        emitByte(compiler.upvalues[i].is_local ? 1 : 0);
+        emitByte(compiler.upvalues[i].index);
+    }
+}
+
+static void classDeclaration() {
+    consume(TOKEN_IDENTIFIER, "Expect class name.");
+    uint8_t name_constant = identifierConstant(&parser.previous);
+    declareVariable();
+
+    emitBytes(OP_CLASS, name_constant);
+    defineVariable(name_constant);
+
+    consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
+    consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
 }
 
 static void funDeclaration() {
@@ -601,7 +685,9 @@ static void synchronize() {
 }
 
 static void declaration() {
-    if (match(TOKEN_FUN)) {
+    if (match(TOKEN_CLASS)) {
+        classDeclaration();
+    } else if (match(TOKEN_FUN)) {
         funDeclaration();
     } else if (match(TOKEN_VAR)) {
         varDeclaration();
@@ -672,6 +758,9 @@ static void namedVariable(Token name, bool can_assign) {
     if (arg != -1) {
         get_op = OP_GET_LOCAL;
         set_op = OP_SET_LOCAL;
+    } else if ((arg = resolveUpvalue(current, &name)) != -1) {
+        get_op = OP_GET_UPVALUE;
+        set_op = OP_SET_UPVALUE;
     } else {
         arg = identifierConstant(&name);
         get_op = OP_GET_GLOBAL;
@@ -712,12 +801,13 @@ ParseRule rules[] = {
     [TOKEN_LEFT_BRACE]    = {NULL,     NULL,   PREC_NONE},
     [TOKEN_RIGHT_BRACE]   = {NULL,     NULL,   PREC_NONE},
     [TOKEN_COMMA]         = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_DOT]           = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_DOT]           = {NULL,     dot,    PREC_CALL},
     [TOKEN_MINUS]         = {unary,    binary, PREC_TERM},
     [TOKEN_PLUS]          = {NULL,     binary, PREC_TERM},
     [TOKEN_SEMICOLON]     = {NULL,     NULL,   PREC_NONE},
     [TOKEN_SLASH]         = {NULL,     binary, PREC_FACTOR},
     [TOKEN_STAR]          = {NULL,     binary, PREC_FACTOR},
+    [TOKEN_PERCENT]       = {NULL,     binary, PREC_FACTOR},
     [TOKEN_BANG]          = {unary,    NULL,   PREC_NONE},
     [TOKEN_BANG_EQUAL]    = {NULL,     binary, PREC_EQUALITY},
     [TOKEN_EQUAL]         = {NULL,     NULL,   PREC_NONE},
@@ -794,4 +884,12 @@ ObjFunction* compile(const char* source) {
 
     ObjFunction* function = endCompiler();
     return parser.had_error ? NULL : function;
+}
+
+void markCompilerRoots() {
+    Compiler* compiler = current;
+    while (compiler != NULL) {
+        markObject((Obj*)compiler->function);
+        compiler = compiler->enclosing;
+    }
 }

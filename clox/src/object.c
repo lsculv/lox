@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "common.h"
 #include "memory.h"
 #include "object.h"
 #include "table.h"
@@ -15,16 +16,48 @@ static Obj* allocateObject(size_t size, ObjType type) {
     // that we need to make room for.
     Obj* object = (Obj*)reallocate(NULL, 0, size);
     object->type = type;
+    object->is_marked = false;
 
     // Insert our newly allocated object into the front of the objects list.
     object->next = vm.objects;
     vm.objects = object;
+
+#ifdef DEBUG_LOG_GC
+    eprintf("%p allocate %zu for %d\n", (void*)object, size, type);
+#endif
     return object;
+}
+
+ObjClass* newClass(ObjString* name) {
+    ObjClass* class_ = ALLOCATE_OBJ(ObjClass, OBJ_CLASS);
+    class_->name = name;
+    return class_;
+}
+
+ObjInstance* newInstance(ObjClass* class_) {
+    ObjInstance* instance = ALLOCATE_OBJ(ObjInstance, OBJ_INSTANCE);
+    instance->class_ = class_;
+    initTable(&instance->fields);
+    return instance;
+}
+
+ObjClosure* newClosure(ObjFunction* function) {
+    ObjUpvalue** upvalues = ALLOCATE(ObjUpvalue*, function->upvalue_count);
+    for (int i = 0; i < function->upvalue_count; i++) {
+        upvalues[i] = NULL;
+    }
+
+    ObjClosure* closure = ALLOCATE_OBJ(ObjClosure, OBJ_CLOSURE);
+    closure->function = function;
+    closure->upvalues = upvalues;
+    closure->upvalue_count = function->upvalue_count;
+    return closure;
 }
 
 ObjFunction* newFunction() {
     ObjFunction* function = ALLOCATE_OBJ(ObjFunction, OBJ_FUNCTION);
     function->arity = 0;
+    function->upvalue_count = 0;
     function->name = NULL;
     initChunk(&function->chunk);
     return function;
@@ -41,7 +74,11 @@ static ObjString* allocateString(char* chars, int length, uint32_t hash) {
     string->length = length;
     string->chars = chars;
     string->hash = hash;
+
+    push(OBJ_VAL(string));
     tableSet(&vm.strings, string, NIL_VAL());
+    pop();
+
     return string;
 }
 
@@ -83,6 +120,14 @@ ObjString* copyString(const char* chars, int length) {
     return allocateString(heapChars, length, hash);
 }
 
+ObjUpvalue* newUpvalue(Value* slot) {
+    ObjUpvalue* upvalue = ALLOCATE_OBJ(ObjUpvalue, OBJ_UPVALUE);
+    upvalue->closed = NIL_VAL();
+    upvalue->location = slot;
+    upvalue->next = NULL;
+    return upvalue;
+}
+
 static void printFunction(FILE* restrict stream, ObjFunction* function) {
     if (function->name == NULL) {
         fprintf(stream, "<script>");
@@ -93,8 +138,17 @@ static void printFunction(FILE* restrict stream, ObjFunction* function) {
 
 void printObject(FILE* restrict stream, Value value) {
     switch (OBJ_TYPE(value)) {
+    case OBJ_CLOSURE: {
+        printFunction(stream, AS_CLOSURE(value)->function);
+        break;
+    }
     case OBJ_FUNCTION: printFunction(stream, AS_FUNCTION(value)); break;
     case OBJ_STRING: fprintf(stream, "%s", AS_CSTRING(value)); break;
     case OBJ_NATVIE: fprintf(stream, "<native fn>"); break;
+    case OBJ_UPVALUE: fprintf(stream, "upvalue"); break;
+    case OBJ_CLASS: fprintf(stream, "%s", AS_CLASS(value)->name->chars); break;
+    case OBJ_INSTANCE:
+        fprintf(stream, "%s instance", AS_INSTANCE(value)->class_->name->chars);
+        break;
     }
 }

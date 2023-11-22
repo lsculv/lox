@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -31,7 +32,16 @@ void printValue(FILE* restrict stream, Value value) {
     switch (value.type) {
     case VAL_BOOL: fprintf(stream, AS_BOOL(value) ? "true" : "false"); break;
     case VAL_NIL: fprintf(stream, "nil"); break;
-    case VAL_NUMBER: fprintf(stream, "%g", AS_NUMBER(value)); break;
+    case VAL_NUMBER: {
+        double number = AS_NUMBER(value);
+        // Check if the value is integer-like
+        if (fmod(number, 1) == 0) {
+            fprintf(stream, "%.0f", number);
+        } else {
+            fprintf(stream, "%g", AS_NUMBER(value));
+        }
+        break;
+    }
     case VAL_OBJ: printObject(stream, value); break;
     }
 }

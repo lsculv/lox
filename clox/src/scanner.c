@@ -87,6 +87,7 @@ inline char* tokenTypeName(TokenType type) {
     case TOKEN_SEMICOLON: return "TOKEN_SEMICOLON";
     case TOKEN_SLASH: return "TOKEN_SLASH";
     case TOKEN_STAR: return "TOKEN_STAR";
+    case TOKEN_PERCENT: return "TOKEN_PERCENT";
     case TOKEN_BANG: return "TOKEN_BANG";
     case TOKEN_BANG_EQUAL: return "TOKEN_BANG_EQUAL";
     case TOKEN_EQUAL: return "TOKEN_EQUAL";
@@ -134,10 +135,22 @@ static void skipWhitespace() {
             break;
         case '/':
             if (peekNext() == '/') {
-                // A comment goes until the end of the line.
+                // A '//' comment goes until the end of the line.
                 while (peek() != '\n' && !isAtEnd()) {
                     advance();
                 }
+            } else if (peekNext() == '*') {
+                // A '/*' comment goes until '*/'
+                advance();
+                advance();
+                while (!(peek() == '*' && peekNext() == '/') && !isAtEnd()) {
+                    if (peek() == '\n') {
+                        scanner.line++;
+                    }
+                    advance();
+                }
+                advance();
+                advance();
             } else {
                 return;
             }
@@ -266,6 +279,7 @@ Token scanToken() {
     case '+': return makeToken(TOKEN_PLUS);
     case '/': return makeToken(TOKEN_SLASH);
     case '*': return makeToken(TOKEN_STAR);
+    case '%': return makeToken(TOKEN_PERCENT);
     case '!': return makeToken(match('=') ? TOKEN_BANG_EQUAL : TOKEN_BANG);
     case '=': return makeToken(match('=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
     case '<': return makeToken(match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);
@@ -273,5 +287,8 @@ Token scanToken() {
     case '"': return string();
     }
 
-    return errorToken("Unexpected character.");
+    char buffer[50]; // This should always be more than enough.
+    int max_len = sizeof buffer;
+    snprintf(buffer, max_len, "Unexpected character '%c'.", c);
+    return errorToken(buffer);
 }

@@ -3,6 +3,7 @@
 
 #include "chunk.h"
 #include "debug.h"
+#include "object.h"
 #include "value.h"
 
 void disassembleChunk(Chunk* chunk, const char* name) {
@@ -69,6 +70,10 @@ int disassembleInstruction(Chunk* chunk, int offset) {
     case OP_GET_GLOBAL: return constantInstruction("OP_GET_GLOBAL", chunk, offset);
     case OP_DEFINE_GLOBAL: return constantInstruction("OP_DEFINE_GLOBAL", chunk, offset);
     case OP_SET_GLOBAL: return constantInstruction("OP_SET_GLOBAL", chunk, offset);
+    case OP_GET_UPVALUE: return byteInstruction("OP_GET_UPVALUE", chunk, offset);
+    case OP_SET_UPVALUE: return byteInstruction("OP_SET_UPVALUE", chunk, offset);
+    case OP_GET_PROPERTY: return constantInstruction("OP_GET_PROPERTY", chunk, offset);
+    case OP_SET_PROPERTY: return constantInstruction("OP_SET_PROPERTY", chunk, offset);
     case OP_EQUAL: return simpleInstruction("OP_EQUAL", offset);
     case OP_GREATER: return simpleInstruction("OP_GREATER", offset);
     case OP_LESS: return simpleInstruction("OP_LESS", offset);
@@ -76,7 +81,27 @@ int disassembleInstruction(Chunk* chunk, int offset) {
     case OP_SUBTRACT: return simpleInstruction("OP_SUBTRACT", offset);
     case OP_MULTIPLY: return simpleInstruction("OP_MULTIPLY", offset);
     case OP_DIVIDE: return simpleInstruction("OP_DIVIDE", offset);
+    case OP_MOD: return simpleInstruction("OP_MOD", offset);
     case OP_NOT: return simpleInstruction("OP_NOT", offset);
+    case OP_CLASS: return constantInstruction("OP_CLASS", chunk, offset);
+    case OP_CLOSE_UPVALUE: return simpleInstruction("OP_CLOSE_UPVALUE", offset);
+    case OP_CLOSURE: {
+        offset++;
+        uint8_t constant = chunk->code[offset++];
+        eprintf("%-16s %4d ", "OP_CLOSURE", constant);
+        printValue(stderr, chunk->constants.values[constant]);
+        eprintf("\n");
+
+        ObjFunction* function = AS_FUNCTION(chunk->constants.values[constant]);
+        for (int j = 0; j < function->upvalue_count; j++) {
+            int is_local = chunk->code[offset++];
+            int index = chunk->code[offset++];
+            eprintf("%04d      |                     %s %d\n", offset - 2,
+                    is_local ? "local" : "upvalue", index);
+        }
+
+        return offset;
+    }
     default: eprintf("Unknown opcode %d\n", instruction); return offset + 1;
     }
 }

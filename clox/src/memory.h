@@ -17,6 +17,9 @@
     (reallocate(pointer, sizeof(type) * (old_count), 0))
 
 void* reallocate(void* mem, size_t old_size, size_t new_size);
+void markValue(Value value);
+void markObject(Obj* object);
+void collectGarbage();
 void freeObjects();
 
 #endif /* ifndef clox_memory_h */
