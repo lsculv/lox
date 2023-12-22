@@ -13,15 +13,22 @@ PROFILE_TARGETS=$(addprefix $(PROFILE_DIR)/, $(OBJECTS))
 DEBUG_TARGETS=$(addprefix $(DEBUG_DIR)/, $(OBJECTS))
 
 CFLAGS=-Wall -Wextra -Werror -lm
+ifndef NO_NAN_BOXING
+	CFLAGS += -DNAN_BOXING
+endif
 RELEASE_FLAGS=-O2
 PROFILE_FLAGS=-O2 -g
 DEBUG_FLAGS=-g -DDEBUG_MODE
 
-.PHONY: all
-all: RELEASE
-
+.PHONY: release profile debug
+release: RELEASE
 profile: PROFILE
 debug: DEBUG
+
+.PHONY: all
+all: release profile debug
+
+
 
 define build_target
 $1: $$($(1)_TARGETS)

@@ -45,9 +45,9 @@ static int constantInstruction(const char* name, Chunk* chunk, int offset) {
 static int invokeInstruction(const char* name, Chunk* chunk, int offset) {
     uint8_t constant = chunk->code[offset + 1];
     uint8_t arg_count = chunk->code[offset + 2];
-    printf("%-16s (%d args) %4d '", name, arg_count, constant);
+    eprintf("%-16s (%d args) %4d '", name, arg_count, constant);
     printValue(stderr, chunk->constants.values[constant]);
-    printf("'\n");
+    eprintf("'\n");
     return offset + 3;
 }
 

@@ -178,7 +178,7 @@ static bool invoke(ObjString* name, int arg_count) {
     ObjInstance* instance = AS_INSTANCE(receiver);
 
     Value value;
-    if (!tableGet(&instance->fields, name, &value)) {
+    if (tableGet(&instance->fields, name, &value)) {
         vm.sp[-arg_count - 1] = value;
         return callValue(value, arg_count);
     }
@@ -381,11 +381,6 @@ static InterpretResult run() {
             if (tableGet(&instance->fields, name, &value)) {
                 pop(); // pop the Instance.
                 push(value);
-                break;
-            } else {
-                // javascript-like behavior
-                pop(); // pop the Instance.
-                push(NIL_VAL());
                 break;
             }
 
