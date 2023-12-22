@@ -28,9 +28,17 @@ static Obj* allocateObject(size_t size, ObjType type) {
     return object;
 }
 
+ObjBoundMethod* newBoundMethod(Value receiver, ObjClosure* method) {
+    ObjBoundMethod* bound = ALLOCATE_OBJ(ObjBoundMethod, OBJ_BOUND_METHOD);
+    bound->receiver = receiver;
+    bound->method = method;
+    return bound;
+}
+
 ObjClass* newClass(ObjString* name) {
     ObjClass* class_ = ALLOCATE_OBJ(ObjClass, OBJ_CLASS);
     class_->name = name;
+    initTable(&class_->methods);
     return class_;
 }
 
@@ -150,5 +158,9 @@ void printObject(FILE* restrict stream, Value value) {
     case OBJ_INSTANCE:
         fprintf(stream, "%s instance", AS_INSTANCE(value)->class_->name->chars);
         break;
+    case OBJ_BOUND_METHOD: {
+        printFunction(stream, AS_BOUND_METHOD(value)->method->function);
+        break;
+    };
     }
 }
