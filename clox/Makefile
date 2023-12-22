@@ -3,36 +3,46 @@ BUILD_DIR=target
 TEST_DIR=tests
 
 RELEASE_DIR=$(BUILD_DIR)/release
+PROFILE_DIR=$(BUILD_DIR)/profile
 DEBUG_DIR=$(BUILD_DIR)/debug
 
 OBJECTS=chunk.o compiler.o debug.o main.o memory.o object.o scanner.o table.o value.o vm.o 
 
 RELEASE_TARGETS=$(addprefix $(RELEASE_DIR)/, $(OBJECTS))
+PROFILE_TARGETS=$(addprefix $(PROFILE_DIR)/, $(OBJECTS))
 DEBUG_TARGETS=$(addprefix $(DEBUG_DIR)/, $(OBJECTS))
 
 CFLAGS=-Wall -Wextra -Werror -lm
 RELEASE_FLAGS=-O2
+PROFILE_FLAGS=-O2 -g
 DEBUG_FLAGS=-g -DDEBUG_MODE
 
 .PHONY: all
-all: release 
+all: RELEASE
 
-release: $(RELEASE_TARGETS)
-	cc $(CFLAGS) $(RELEASE_FLAGS) -o $(RELEASE_DIR)/clox $^
+profile: PROFILE
+debug: DEBUG
 
-debug: $(DEBUG_TARGETS)
-	cc $(CFLAGS) $(DEBUG_FLAGS) -o $(DEBUG_DIR)/clox $^
+define build_target
+$1: $$($(1)_TARGETS)
+	cc $$(CFLAGS) $$($1_FLAGS) -o $$($1_DIR)/clox $$^
+endef
 
-$(RELEASE_DIR)/%.o: $(SOURCE_DIR)/%.c | $(RELEASE_DIR)
-	cc $(CFLAGS) $(RELEASE_FLAGS) -c $< -o $@
+define build_object
+$$($1_DIR)/%.o: $$(SOURCE_DIR)/%.c | $$($1_DIR)
+	cc $$(CFLAGS) $$($1_FLAGS) -c $$< -o $$@
+endef
 
-$(DEBUG_DIR)/%.o: $(SOURCE_DIR)/%.c | $(DEBUG_DIR)
-	cc $(CFLAGS) $(DEBUG_FLAGS) -c $< -o $@
+$(eval $(call build_target,RELEASE))
+$(eval $(call build_target,PROFILE))
+$(eval $(call build_target,DEBUG))
 
-$(RELEASE_DIR):
-	mkdir -p $@
+$(eval $(call build_object,RELEASE))
+$(eval $(call build_object,PROFILE))
+$(eval $(call build_object,DEBUG))
 
-$(DEBUG_DIR):
+# Rule to create the target directories
+$(RELEASE_DIR) $(PROFILE_DIR) $(DEBUG_DIR):
 	mkdir -p $@
 
 .PHONY: fmt
