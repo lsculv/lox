@@ -19,7 +19,7 @@ void freeTable(Table* table) {
     initTable(table);
 }
 
-static Entry* findEntry(Entry* entries, int capacity, ObjString* key) {
+static Entry* findEntry(Entry* entries, uint32_t capacity, ObjString* key) {
     uint32_t index = key->hash & (capacity - 1);
     Entry* tombstone = NULL;
     // This loop can never be infinite because of our load factor. There will
@@ -52,11 +52,11 @@ static Entry* findEntry(Entry* entries, int capacity, ObjString* key) {
     }
 }
 
-static void adjustCapacity(Table* table, int capacity) {
+static void adjustCapacity(Table* table, uint32_t capacity) {
     // Allocate the backing array.
     Entry* entries = ALLOCATE(Entry, capacity);
     // Initialize all of the entries in the array.
-    for (int i = 0; i < capacity; i++) {
+    for (uint32_t i = 0; i < capacity; i++) {
         entries[i].key = NULL;
         entries[i].value = NIL_VAL();
     }
@@ -64,7 +64,7 @@ static void adjustCapacity(Table* table, int capacity) {
     // Reset the count so we can discard the tombstones in the previous array.
     table->count = 0;
     // Loop over all the old values in the table.
-    for (int i = 0; i < table->capacity; i++) {
+    for (uint32_t i = 0; i < table->capacity; i++) {
         // Get the entry.
         Entry* entry = &table->entries[i];
         // If the entry is empty skip over it, there is nothing to be done.
@@ -107,7 +107,7 @@ bool tableGet(Table* table, ObjString* key, Value* value) {
 /// key is created. Returns false if the key already existed.
 bool tableSet(Table* table, ObjString* key, Value value) {
     if (table->count >= table->capacity * TABLE_MAX_LOAD) {
-        int capacity = GROW_CAPACITY(table->capacity);
+        uint32_t capacity = GROW_CAPACITY(table->capacity);
         adjustCapacity(table, capacity);
     }
     Entry* entry = findEntry(table->entries, table->capacity, key);
@@ -144,7 +144,7 @@ bool tableDelete(Table* table, ObjString* key) {
 }
 
 void tableAddAll(Table* from, Table* to) {
-    for (int i = 0; i < from->capacity; i++) {
+    for (uint32_t i = 0; i < from->capacity; i++) {
         Entry* entry = &from->entries[i];
         if (entry->key != NULL) {
             tableSet(to, entry->key, entry->value);
@@ -152,7 +152,8 @@ void tableAddAll(Table* from, Table* to) {
     }
 }
 
-ObjString* tableFindString(Table* table, const char* chars, int length, uint32_t hash) {
+ObjString* tableFindString(Table* table, const char* chars, uint32_t length,
+                           uint32_t hash) {
     if (table->count == 0) {
         return NULL;
     }
@@ -176,7 +177,7 @@ ObjString* tableFindString(Table* table, const char* chars, int length, uint32_t
 }
 
 void tableRemoveWhite(Table* table) {
-    for (int i = 0; i < table->capacity; i++) {
+    for (uint32_t i = 0; i < table->capacity; i++) {
         Entry* entry = &table->entries[i];
         if (entry->key != NULL && !entry->key->obj.is_marked) {
             tableDelete(table, entry->key);
@@ -185,7 +186,7 @@ void tableRemoveWhite(Table* table) {
 }
 
 void markTable(Table* table) {
-    for (int i = 0; i < table->capacity; i++) {
+    for (uint32_t i = 0; i < table->capacity; i++) {
         Entry* entry = &table->entries[i];
         markObject((Obj*)entry->key);
         markValue(entry->value);

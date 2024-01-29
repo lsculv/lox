@@ -77,7 +77,7 @@ ObjNative* newNative(NativeFn function) {
     return native;
 }
 
-static ObjString* allocateString(char* chars, int length, uint32_t hash) {
+static ObjString* allocateString(char* chars, uint32_t length, uint32_t hash) {
     ObjString* string = ALLOCATE_OBJ(ObjString, OBJ_STRING);
     string->length = length;
     string->chars = chars;
@@ -90,9 +90,9 @@ static ObjString* allocateString(char* chars, int length, uint32_t hash) {
     return string;
 }
 
-static uint32_t hashString(const char* key, int length) {
+static uint32_t hashString(const char* key, uint32_t length) {
     uint32_t hash = 216613626lu;
-    for (int i = 0; i < length; i++) {
+    for (uint32_t i = 0; i < length; i++) {
         hash ^= (uint8_t)key[i];
         hash *= 16777619;
     }
@@ -100,7 +100,7 @@ static uint32_t hashString(const char* key, int length) {
 }
 
 /// Owns the underlying memory in the `chars` parameter.
-ObjString* takeString(char* chars, int length) {
+ObjString* takeString(char* chars, uint32_t length) {
     uint32_t hash = hashString(chars, length);
     ObjString* interned = tableFindString(&vm.strings, chars, length, hash);
     if (interned != NULL) {
@@ -111,7 +111,7 @@ ObjString* takeString(char* chars, int length) {
 }
 
 /// This function assumes that it cannot take ownership of the underlying memory.
-ObjString* copyString(const char* chars, int length) {
+ObjString* copyString(const char* chars, uint32_t length) {
     uint32_t hash = hashString(chars, length);
     ObjString* interned = tableFindString(&vm.strings, chars, length, hash);
     if (interned != NULL) {
@@ -162,5 +162,6 @@ void printObject(FILE* restrict stream, Value value) {
         printFunction(stream, AS_BOUND_METHOD(value)->method->function);
         break;
     };
+        default: __builtin_unreachable();
     }
 }

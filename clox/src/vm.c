@@ -22,7 +22,7 @@ static Value clockNative(int arg_count, Value* args) {
     return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
 }
 
-static void resetStack() {
+static void resetStack(void) {
     vm.sp = vm.stack;
     vm.frame_count = 0;
     vm.open_upvalues = NULL;
@@ -39,7 +39,7 @@ static void runtimeError(const char* format, ...) {
     for (int i = vm.frame_count - 1; i >= 0; i--) {
         CallFrame* frame = &vm.frames[i];
         ObjFunction* function = frame->closure->function;
-        size_t instruction = frame->ip - function->chunk.code - 1;
+        size_t instruction = (size_t)(frame->ip - function->chunk.code - 1);
         eprintf("[line %d] in ", function->chunk.lines[instruction]);
         if (function->name == NULL) {
             eprintf("script\n");
@@ -49,14 +49,14 @@ static void runtimeError(const char* format, ...) {
     }
 
     CallFrame* frame = &vm.frames[vm.frame_count - 1];
-    size_t instruction = frame->ip - frame->closure->function->chunk.code - 1;
+    size_t instruction = (size_t)(frame->ip - frame->closure->function->chunk.code - 1);
     int line = frame->closure->function->chunk.lines[instruction];
     eprintf("[line %d] in script\n", line);
     resetStack();
 }
 
 static void defineNative(const char* name, NativeFn function) {
-    push(OBJ_VAL(copyString(name, (int)strlen(name))));
+    push(OBJ_VAL(copyString(name, (uint32_t)strlen(name))));
     push(OBJ_VAL(newNative(function)));
     tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
     pop();
@@ -244,11 +244,11 @@ static bool isFalsey(Value value) {
     return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
 }
 
-static void concatenate() {
+static void concatenate(void) {
     ObjString* b = AS_STRING(peek(0));
     ObjString* a = AS_STRING(peek(1));
 
-    int length = a->length + b->length;
+    uint32_t length = a->length + b->length;
     char* chars = ALLOCATE(char, length + 1);
     memcpy(chars, a->chars, a->length);
     memcpy(chars + a->length, b->chars, b->length);
@@ -261,7 +261,7 @@ static void concatenate() {
     push(OBJ_VAL(result));
 }
 
-static InterpretResult run() {
+static InterpretResult run(void) {
     CallFrame* frame = &vm.frames[vm.frame_count - 1];
 #define READ_BYTE() (*frame->ip++)
 #define READ_SHORT() (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
@@ -283,8 +283,9 @@ static InterpretResult run() {
 
     for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
-        disassembleInstruction(&frame->closure->function->chunk,
-                               (int)(frame->ip - frame->closure->function->chunk.code));
+        disassembleInstruction(
+            &frame->closure->function->chunk,
+            (uint32_t)(frame->ip - frame->closure->function->chunk.code));
         eprintf("          ");
         // print when the stack is empty
         if (vm.stack == vm.sp) {

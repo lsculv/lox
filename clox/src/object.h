@@ -59,7 +59,7 @@ typedef struct {
 
 struct ObjString {
     Obj obj;
-    int length;
+    uint32_t length;
     char* chars;
     uint32_t hash;
 };
@@ -100,10 +100,10 @@ ObjBoundMethod* newBoundMethod(Value receiver, ObjClosure* method);
 ObjClass* newClass(ObjString* name);
 ObjInstance* newInstance(ObjClass* class_);
 ObjClosure* newClosure(ObjFunction* function);
-ObjFunction* newFunction();
+ObjFunction* newFunction(void);
 ObjNative* newNative(NativeFn function);
-ObjString* takeString(char* chars, int length);
-ObjString* copyString(const char* chars, int length);
+ObjString* takeString(char* chars, uint32_t length);
+ObjString* copyString(const char* chars, uint32_t length);
 ObjUpvalue* newUpvalue(Value* slot);
 void printObject(FILE* __restrict stream, Value value);
 

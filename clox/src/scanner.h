@@ -1,6 +1,8 @@
 #ifndef clox_scaner_h
 #define clox_scaner_h
 
+#include "common.h"
+
 typedef enum {
     // Single-character tokens.
     TOKEN_LEFT_PAREN,
@@ -53,12 +55,12 @@ typedef enum {
 typedef struct {
     TokenType type;
     const char* start;
-    int length;
+    uint32_t length;
     int line;
 } Token;
 
 void initScanner(const char* source);
-Token scanToken();
+Token scanToken(void);
 char* tokenTypeName(TokenType type);
 
 #endif /* ifndef clox_scaner_h */

@@ -62,7 +62,8 @@ void markObject(Obj* object) {
         // Note that we use the system `realloc` instead of our `reallocate` function
         // we would normally use for a dynamic array. This is so we don't recursively
         // initiate a GC while doing a GC. That would be bad.
-        vm.gray_stack = (Obj**)realloc(vm.gray_stack, sizeof(Obj*) * vm.gray_capacity);
+        vm.gray_stack =
+            (Obj**)realloc(vm.gray_stack, sizeof(Obj*) * (size_t)vm.gray_capacity);
 
         // This would be bad
         if (vm.gray_stack == NULL) {
@@ -131,6 +132,7 @@ static void blackenObject(Obj* object) {
         markObject((Obj*)bound->method);
         break;
     }
+    default: __builtin_unreachable();
     }
 }
 
@@ -182,10 +184,11 @@ static void freeObject(Obj* object) {
         FREE(ObjBoundMethod, object);
         break;
     }
+    default: __builtin_unreachable();
     }
 }
 
-static void markRoots() {
+static void markRoots(void) {
     for (Value* slot = vm.stack; slot < vm.sp; slot++) {
         markValue(*slot);
     }
@@ -204,14 +207,14 @@ static void markRoots() {
     markObject((Obj*)vm.initString);
 }
 
-static void traceReferences() {
+static void traceReferences(void) {
     while (vm.gray_count > 0) {
         Obj* object = vm.gray_stack[--vm.gray_count];
         blackenObject(object);
     }
 }
 
-static void sweep() {
+static void sweep(void) {
     Obj* previous = NULL;
     Obj* object = vm.objects;
     while (object != NULL) {

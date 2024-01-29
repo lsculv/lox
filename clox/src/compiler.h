@@ -5,6 +5,6 @@
 #include "vm.h"
 
 ObjFunction* compile(const char* source);
-void markCompilerRoots();
+void markCompilerRoots(void);
 
 #endif /* ifndef clox_compiler_h */

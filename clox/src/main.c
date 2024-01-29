@@ -6,7 +6,7 @@
 #include "common.h"
 #include "vm.h"
 
-static void repl() {
+static void repl(void) {
     char line[1024];
     for (;;) {
         printf("> ");
@@ -53,7 +53,7 @@ static char* readFile(const char* path) {
         exit(74);
     }
 
-    size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
+    size_t bytesRead = fread(buffer, sizeof(char), (size_t)fileSize, file);
     if (bytesRead < (size_t)fileSize) {
         eprintf("Error: Could not read file '%s': '%s'.\n", path, strerror(errno));
     }

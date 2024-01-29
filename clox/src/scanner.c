@@ -26,20 +26,20 @@ static bool isDigit(char c) {
     return '0' <= c && c <= '9';
 }
 
-static bool isAtEnd() {
+static bool isAtEnd(void) {
     return *scanner.current == '\0';
 }
 
-static char advance() {
+static char advance(void) {
     scanner.current++;
     return scanner.current[-1];
 }
 
-static char peek() {
+static char peek(void) {
     return *scanner.current;
 }
 
-static char peekNext() {
+static char peekNext(void) {
     if (isAtEnd())
         return '\0';
     return scanner.current[1];
@@ -60,7 +60,7 @@ static Token makeToken(TokenType type) {
     Token token;
     token.type = type;
     token.start = scanner.start;
-    token.length = (int)(scanner.current - scanner.start);
+    token.length = (uint32_t)(scanner.current - scanner.start);
     token.line = scanner.line;
     return token;
 }
@@ -69,7 +69,7 @@ static Token errorToken(const char* message) {
     Token token;
     token.type = TOKEN_ERROR;
     token.start = message;
-    token.length = (int)strlen(message);
+    token.length = (uint32_t)strlen(message);
     token.line = scanner.line;
     return token;
 }
@@ -121,7 +121,7 @@ inline char* tokenTypeName(TokenType type) {
     }
 }
 
-static void skipWhitespace() {
+static void skipWhitespace(void) {
     for (;;) {
         char c = peek();
         switch (c) {
@@ -160,7 +160,7 @@ static void skipWhitespace() {
     }
 }
 
-static TokenType checkKeyword(int start, int length, const char* rest, TokenType type) {
+static TokenType checkKeyword(uint32_t start, uint32_t length, const char* rest, TokenType type) {
     // First check that the identifier lengths are the same.
     // Then check that all characters past the first match,
     // as we already expect the caller to check the first character matches
@@ -172,7 +172,7 @@ static TokenType checkKeyword(int start, int length, const char* rest, TokenType
     return TOKEN_IDENTIFIER;
 }
 
-static TokenType identifierType() {
+static TokenType identifierType(void) {
     switch (scanner.start[0]) {
     case 'a': return checkKeyword(1, 2, "nd", TOKEN_AND);
     case 'c': return checkKeyword(1, 4, "lass", TOKEN_CLASS);
@@ -209,14 +209,14 @@ static TokenType identifierType() {
     return TOKEN_IDENTIFIER;
 }
 
-static Token identifier() {
+static Token identifier(void) {
     while (isAlpha(peek()) || isDigit(peek())) {
         advance();
     }
     return makeToken(identifierType());
 }
 
-static Token number() {
+static Token number(void) {
     while (isDigit(peek())) {
         advance();
     }
@@ -234,7 +234,7 @@ static Token number() {
     return makeToken(TOKEN_NUMBER);
 }
 
-static Token string() {
+static Token string(void) {
     while (peek() != '"' && !isAtEnd()) {
         if (peek() == '\n') {
             scanner.line++;
@@ -251,7 +251,7 @@ static Token string() {
     return makeToken(TOKEN_STRING);
 }
 
-Token scanToken() {
+Token scanToken(void) {
     skipWhitespace();
     scanner.start = scanner.current;
 
@@ -287,8 +287,8 @@ Token scanToken() {
     case '"': return string();
     }
 
-    char buffer[50]; // This should always be more than enough.
-    int max_len = sizeof buffer;
+    char buffer[50] = {0}; // This should always be more than enough.
+    size_t max_len = sizeof buffer;
     snprintf(buffer, max_len, "Unexpected character '%c'.", c);
     return errorToken(buffer);
 }
