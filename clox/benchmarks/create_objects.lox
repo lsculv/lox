@@ -1,0 +1,13 @@
+class C {
+    init() {
+        this.f = 12;
+    } 
+}
+
+var i = 0;
+var c = nil;
+while (i < 10000000) {
+   c = C(); 
+   i = i + 1;
+}
+

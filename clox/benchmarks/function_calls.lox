@@ -1,0 +1,9 @@
+fun f(x) {
+    return x;
+}
+
+var i = 0;
+while (i < 100000) {
+    f(i);
+    i = i + 1;
+}
