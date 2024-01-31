@@ -16,12 +16,12 @@ PROFILE_OBJECTS=$(addprefix $(PROFILE_DIR)/, $(OBJECTS))
 DEBUG_OBJECTS=$(addprefix $(DEBUG_DIR)/, $(OBJECTS))
 
 CFLAGS=-I $(HEADER_DIR) -lm \
-	-Wall -Wextra -Werror  -Wpedantic \
-	-Wformat=2 -Wformat-overflow=2 -Wformat-truncation=2 -Wformat-security \
-	-Wnull-dereference -Wstack-protector -Wtrampolines -Walloca -Wvla \
-	-Warray-bounds=2 -Wimplicit-fallthrough=3 \
-	-Wshift-overflow=2 -Wcast-qual -Wstringop-overflow=4 -Wconversion \
-	-Warith-conversion -Wlogical-op -Wduplicated-cond -Wduplicated-branches \
+	-Wall -Wextra -Wpedantic -Wformat=2 -Wformat-overflow=2 \
+	-Wformat-truncation=2 -Wformat-security -Wnull-dereference \
+	-Wstack-protector -Wtrampolines -Walloca -Wvla \
+	-Warray-bounds=2 -Wdouble-promotion -Wshift-overflow=2 \
+	-Wcast-qual -Wstringop-overflow=4 -Wconversion \
+	-Wlogical-op -Wduplicated-cond -Wduplicated-branches \
 	-Wformat-signedness -Wshadow -Wstrict-overflow=2 -Wundef \
 	-Wstrict-prototypes -Wstack-usage=1000000 \
 	-Wcast-align=strict -D_FORTIFY_SOURCE=3 -fstack-protector-strong \
@@ -33,7 +33,7 @@ ifndef NO_NAN_BOXING
 endif
 RELEASE_FLAGS=-O3
 PROFILE_FLAGS=-O3 -gdwarf
-DEBUG_FLAGS=-g -DDEBUG_MODE
+DEBUG_FLAGS=-Og -ggdb -fsanitize=undefined -fsanitize=address -DDEBUG_MODE
 
 .PHONY: release profile debug
 release: RELEASE
