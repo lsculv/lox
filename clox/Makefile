@@ -33,7 +33,11 @@ ifndef NO_NAN_BOXING
 endif
 RELEASE_FLAGS=-O3
 PROFILE_FLAGS=-O3 -gdwarf
-DEBUG_FLAGS=-Og -ggdb -fsanitize=undefined -fsanitize=address -DDEBUG_MODE
+DEBUG_FLAGS=-Og -ggdb -fsanitize=undefined -DDEBUG_MODE
+ifdef ASAN
+	DEBUG_FLAGS += -fsanitize=address
+endif
+
 
 .PHONY: release profile debug
 release: RELEASE
