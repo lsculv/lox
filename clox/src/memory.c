@@ -94,7 +94,7 @@ static void blackenObject(Obj* object) {
     eprintf("\n");
 #endif
     switch (object->type) {
-    case OBJ_NATVIE:
+    case OBJ_NATIVE:
     case OBJ_STRING: break;
     case OBJ_UPVALUE: {
         markValue(((ObjUpvalue*)object)->closed);
@@ -160,7 +160,7 @@ static void freeObject(Obj* object) {
         FREE(ObjString, object);
         break;
     }
-    case OBJ_NATVIE: {
+    case OBJ_NATIVE: {
         FREE(ObjNative, object);
         break;
     }
