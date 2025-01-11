@@ -142,7 +142,7 @@ static bool callValue(Value callee, int arg_count) {
             return true;
         }
         case OBJ_CLOSURE: return call(AS_CLOSURE(callee), arg_count);
-        case OBJ_NATVIE: {
+        case OBJ_NATIVE: {
             NativeFn native = AS_NATIVE(callee);
             Value result = native(arg_count, vm.sp - arg_count);
             vm.sp -= arg_count + 1;

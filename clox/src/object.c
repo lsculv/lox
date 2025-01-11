@@ -72,7 +72,7 @@ ObjFunction* newFunction() {
 }
 
 ObjNative* newNative(NativeFn function) {
-    ObjNative* native = ALLOCATE_OBJ(ObjNative, OBJ_NATVIE);
+    ObjNative* native = ALLOCATE_OBJ(ObjNative, OBJ_NATIVE);
     native->function = function;
     return native;
 }
@@ -152,7 +152,7 @@ void printObject(FILE* restrict stream, Value value) {
     }
     case OBJ_FUNCTION: printFunction(stream, AS_FUNCTION(value)); break;
     case OBJ_STRING: fprintf(stream, "%s", AS_CSTRING(value)); break;
-    case OBJ_NATVIE: fprintf(stream, "<native fn>"); break;
+    case OBJ_NATIVE: fprintf(stream, "<native fn>"); break;
     case OBJ_UPVALUE: fprintf(stream, "upvalue"); break;
     case OBJ_CLASS: fprintf(stream, "%s", AS_CLASS(value)->name->chars); break;
     case OBJ_INSTANCE:

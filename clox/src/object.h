@@ -31,7 +31,7 @@ typedef enum {
     OBJ_FUNCTION,
     OBJ_INSTANCE,
     OBJ_CLOSURE,
-    OBJ_NATVIE,
+    OBJ_NATIVE,
     OBJ_CLASS,
     OBJ_BOUND_METHOD,
 } ObjType;
