@@ -21,7 +21,8 @@ $(DEBUG_OBJECTS): | $(DEBUG_DIR)
 
 DEPENDENCY_FILES=$(patsubst %.o,%.d,$(RELEASE_OBJECTS) $(PROFILE_OBJECTS) $(DEBUG_OBJECTS))
 
-CFLAGS=-I $(HEADER_DIR) -lm \
+CC ?= cc
+CFLAGS=-I $(HEADER_DIR) \
 	-Wall -Wextra -Wpedantic -Wformat=2 -Wformat-overflow=2 \
 	-Wformat-truncation=2 -Wformat-security -Wnull-dereference \
 	-Wstack-protector -Wtrampolines -Walloca -Wvla \
@@ -32,11 +33,13 @@ CFLAGS=-I $(HEADER_DIR) -lm \
 	-Wstrict-prototypes -Wstack-usage=1000000 \
 	-Wcast-align=strict -D_FORTIFY_SOURCE=3 -fstack-protector-strong \
 	-fstack-clash-protection -fPIE -fsanitize=bounds \
-	-fsanitize-undefined-trap-on-error -Wl,-z,relro -Wl,-z,now \
-	-Wl,-z,noexecstack -Wl,-z,separate-code
+	-fsanitize-undefined-trap-on-error
 ifndef NO_NAN_BOXING
 	CFLAGS += -DNAN_BOXING
 endif
+
+LDFLAGS=-lm -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -Wl,-z,separate-code
+
 RELEASE_FLAGS=-O3
 PROFILE_FLAGS=-O3 -gdwarf
 DEBUG_FLAGS=-Og -ggdb -fsanitize=undefined -DDEBUG_MODE
@@ -56,12 +59,12 @@ all: release profile debug
 
 define build_target
 $1: $$($(1)_OBJECTS)
-	cc $$(CFLAGS) $$($1_FLAGS) -o $$($1_DIR)/$(BIN_NAME) $$^
+	$(CC) $$(CFLAGS) $$(LDFLAGS) $$($1_FLAGS)  -o $$($1_DIR)/$(BIN_NAME) $$^
 endef
 
 define build_object
 $$($1_DIR)/%.o: $$(SOURCE_DIR)/%.c | $$($1_DIR)
-	cc $$(CFLAGS) $$($1_FLAGS) -MMD -MP -c $$< -o $$@
+	$(CC) $$(CFLAGS) $$($1_FLAGS) -MMD -MP -c $$< -o $$@
 endef
 
 $(eval $(call build_target,RELEASE))
