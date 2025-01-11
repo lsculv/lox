@@ -59,7 +59,7 @@ all: release profile debug
 
 define build_target
 $1: $$($(1)_OBJECTS)
-	$(CC) $$(CFLAGS) $$(LDFLAGS) $$($1_FLAGS)  -o $$($1_DIR)/$(BIN_NAME) $$^
+	$(CC) $$(CFLAGS) $$(LDFLAGS) $$($1_FLAGS) -o $$($1_DIR)/$(BIN_NAME) $$^
 endef
 
 define build_object
